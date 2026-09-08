@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Top blue circle
               Container(
-                height: 280,
+                height: 250,
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: blue,
@@ -88,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Login',
                     style: GoogleFonts.lato(
                       color: Colors.white,
-                      fontSize: 58,
+                      fontSize: 70,
                       fontWeight: FontWeight.w300,
                     ),
                   ),
