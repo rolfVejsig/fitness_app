@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/api_service.dart';
+
+import '../view_models/login_view_model.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.viewModel});
+
+  final LoginViewModel? viewModel;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -14,51 +17,32 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
 
   bool obscurePassword = true;
-  bool isLoading = false;
+  late final LoginViewModel viewModel;
 
-  final ApiService apiService = ApiService();
+  @override
+  void initState() {
+    super.initState();
+    viewModel = widget.viewModel ?? LoginViewModel();
+    viewModel.addListener(_onViewModelChanged);
+  }
 
-  Future<void> login() async {
-    final username = usernameController.text.trim();
-    final password = passwordController.text;
+  void _onViewModelChanged() {
+    if (!mounted) return;
 
-    if (username.isEmpty || password.isEmpty) {
-      showMessage('Please enter username and password');
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      final result = await apiService.login(
-        username,
-        password,
+    setState(() {});
+    final message = viewModel.message;
+    if (message != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
       );
-
-      if (result['success'] == true) {
-        showMessage('Login successful');
-
-        // Senere:
-        // Navigator.pushReplacement(...)
-      } else {
-        showMessage(result['message'] ?? 'Login failed');
-      }
-    } catch (e) {
-      showMessage('Could not connect to server');
+      viewModel.clearMessage();
     }
-
-    setState(() {
-      isLoading = false;
-    });
   }
 
-  void showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  Future<void> login() => viewModel.login(
+        username: usernameController.text,
+        password: passwordController.text,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: isLoading ? null : login,
+                        onPressed: viewModel.isLoading ? null : login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: blue,
                           foregroundColor: Colors.white,
@@ -222,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        child: isLoading
+                        child: viewModel.isLoading
                             ? const CircularProgressIndicator(
                                 color: Colors.white,
                               )
@@ -318,6 +302,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    viewModel.removeListener(_onViewModelChanged);
+    if (widget.viewModel == null) {
+      viewModel.dispose();
+    }
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();
