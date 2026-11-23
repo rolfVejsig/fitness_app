@@ -1,313 +1,188 @@
-import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:material_ui/material_ui.dart';
 
-import '../view_models/login_view_model.dart';
+import '../services/api_service.dart';
+import '../theme/app_colors.dart';
+import '../view_models/auth_view_model.dart';
+import '../widgets/auth_submit_button.dart';
+import '../widgets/auth_text_field.dart';
+import 'home_screen.dart';
+import 'sign_up_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.viewModel});
 
-  final LoginViewModel? viewModel;
+  final AuthViewModel? viewModel;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final usernameController = TextEditingController();
-  final passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
 
-  bool obscurePassword = true;
-  late final LoginViewModel viewModel;
+  late final AuthViewModel _viewModel;
+  late final bool _ownsViewModel;
 
   @override
   void initState() {
     super.initState();
-    viewModel = widget.viewModel ?? LoginViewModel();
-    viewModel.addListener(_onViewModelChanged);
+    _ownsViewModel = widget.viewModel == null;
+    _viewModel = widget.viewModel ?? AuthViewModel();
   }
 
-  void _onViewModelChanged() {
-    if (!mounted) return;
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
 
-    setState(() {});
-    final message = viewModel.message;
-    if (message != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+    try {
+      final user = await _viewModel.login(
+        usernameOrEmail: _usernameController.text.trim(),
+        password: _passwordController.text,
       );
-      viewModel.clearMessage();
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => HomeScreen(username: user.username),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      _showMessage(_viewModel.errorMessage ?? error.message);
+      _viewModel.clearError();
     }
   }
 
-  Future<void> login() => viewModel.login(
-        username: usernameController.text,
-        password: passwordController.text,
-      );
+  Future<void> _openSignUp() async {
+    final createdUsername = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder: (_) => SignUpScreen(viewModel: _viewModel),
+      ),
+    );
+    if (!mounted || createdUsername == null) return;
+
+    _usernameController.text = createdUsername;
+    _showMessage('Account created. You can now log in.');
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
-    const background = Color(0xFF022045);
-    const blue = Color(0xFF03346E);
-
-    return Scaffold(
-      backgroundColor: background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-
-              // Top blue circle
-              Container(
-                height: 250,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: blue,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(180),
-                    bottomRight: Radius.circular(180),
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    'Login',
-                    style: GoogleFonts.lato(
-                      color: Colors.white,
-                      fontSize: 70,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 45),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 38),
-                child: Column(
-                  children: [
-
-                    // Username
-                    TextField(
-                      controller: usernameController,
-                      style: GoogleFonts.lato(
-                        color: Colors.white,
+    return AnimatedBuilder(
+      animation: _viewModel,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Container(
+                    height: 230,
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(160),
+                        bottomRight: Radius.circular(160),
                       ),
-                      decoration: InputDecoration(
-                        labelText: 'Username',
-                        labelStyle: GoogleFonts.lato(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        hintText: 'Enter your username',
-                        hintStyle: GoogleFonts.lato(
-                          color: Colors.grey,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.email_outlined,
-                          color: Colors.grey,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                            width: 2,
-                          ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Login',
+                        style: GoogleFonts.lato(
+                          color: Colors.white,
+                          fontSize: 64,
+                          fontWeight: FontWeight.w300,
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 20),
-
-                    // Password
-                    TextField(
-                      controller: passwordController,
-                      obscureText: obscurePassword,
-                      style: GoogleFonts.lato(
-                        color: Colors.white,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        labelStyle: GoogleFonts.lato(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        hintText: 'Enter your password',
-                        hintStyle: GoogleFonts.lato(
-                          color: Colors.grey,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: Colors.grey,
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            color: Colors.grey,
+                  ),
+                  const SizedBox(height: 40),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          AuthTextField(
+                            controller: _usernameController,
+                            label: 'Username or email',
+                            hint: 'Enter your username or email',
+                            icon: Icons.person_outline,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                ? 'Enter your username or email.'
+                                : null,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              obscurePassword = !obscurePassword;
-                            });
-                          },
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
+                          const SizedBox(height: 18),
+                          AuthTextField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            hint: 'Enter your password',
+                            icon: Icons.lock_outline,
+                            obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _login(),
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Enter your password.'
+                                : null,
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: const BorderSide(
-                            color: Colors.white,
-                            width: 2,
+                          const SizedBox(height: 28),
+                          AuthSubmitButton(
+                            label: 'Login',
+                            isLoading: _viewModel.isLoading,
+                            onPressed: _login,
                           ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 18),
-
-                    // Forgot password
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: Text(
-                          'Forgot Password',
-                          style: GoogleFonts.lato(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 35),
-
-                    // Login button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: viewModel.isLoading ? null : login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: blue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: viewModel.isLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : Text(
-                                'Login',
-                                style: GoogleFonts.lato(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Don't have an account? ",
+                                style: GoogleFonts.lato(color: Colors.white),
+                              ),
+                              TextButton(
+                                onPressed: _viewModel.isLoading
+                                    ? null
+                                    : _openSignUp,
+                                child: Text(
+                                  'Sign up',
+                                  style: GoogleFonts.lato(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 32),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 28),
-
-                    // Social login
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        socialButton(
-                          const Icon(
-                            Icons.g_mobiledata,
-                            color: Colors.red,
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(width: 25),
-                        socialButton(
-                          const Icon(
-                            Icons.facebook,
-                            color: Colors.blue,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 25),
-                        socialButton(
-                          const Icon(
-                            Icons.apple,
-                            color: Colors.black,
-                            size: 28,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    // Sign up
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Don't have an account? ",
-                          style: GoogleFonts.lato(
-                            color: Colors.white,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {},
-                          child: Text(
-                            'Sign up',
-                            style: GoogleFonts.lato(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 40),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget socialButton(Widget icon) {
-    return Container(
-      width: 45,
-      height: 45,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: Center(child: icon),
+        );
+      },
     );
   }
 
   @override
   void dispose() {
-    viewModel.removeListener(_onViewModelChanged);
-    if (widget.viewModel == null) {
-      viewModel.dispose();
-    }
-    usernameController.dispose();
-    passwordController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    if (_ownsViewModel) _viewModel.dispose();
     super.dispose();
   }
 }
