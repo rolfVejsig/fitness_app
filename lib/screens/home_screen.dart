@@ -1,11 +1,13 @@
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../models/app_navigation_destination.dart';
 import '../theme/app_colors.dart';
 import '../view_models/home_view_model.dart';
 import '../widgets/dashboard_section_card.dart';
 import '../widgets/fitness_bottom_navigation_bar.dart';
 import 'login_screen.dart';
+import 'workout_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({required this.username, super.key});
@@ -33,53 +35,16 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildHeader(context),
-                  const SizedBox(height: 24),
-                  const DashboardSectionCard(
-                    title: 'Activity',
-                    icon: Icons.insights_rounded,
-                    message: 'No activity recorded yet',
-                    height: 190,
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: DashboardSectionCard(
-                          title: 'Steps',
-                          icon: Icons.directions_walk_rounded,
-                          message: 'No step data yet',
-                          height: 150,
-                          compact: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: DashboardSectionCard(
-                          title: 'Workouts',
-                          icon: Icons.fitness_center_rounded,
-                          message: 'No workouts yet',
-                          height: 150,
-                          compact: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  const DashboardSectionCard(
-                    title: 'Progression',
-                    icon: Icons.trending_up_rounded,
-                    message: 'Your progress will appear here',
-                    height: 154,
-                    compact: true,
-                  ),
-                ],
-              ),
+            child: IndexedStack(
+              index:
+                  _viewModel.selectedDestination ==
+                      AppNavigationDestination.workouts
+                  ? 1
+                  : 0,
+              children: [
+                _buildDashboard(context),
+                WorkoutScreen(username: _viewModel.username),
+              ],
             ),
           ),
           bottomNavigationBar: FitnessBottomNavigationBar(
@@ -88,6 +53,57 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDashboard(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(context),
+          const SizedBox(height: 24),
+          const DashboardSectionCard(
+            title: 'Activity',
+            icon: Icons.insights_rounded,
+            message: 'No activity recorded yet',
+            height: 190,
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Expanded(
+                child: DashboardSectionCard(
+                  title: 'Steps',
+                  icon: Icons.directions_walk_rounded,
+                  message: 'No step data yet',
+                  height: 150,
+                  compact: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: DashboardSectionCard(
+                  title: 'Workouts',
+                  icon: Icons.fitness_center_rounded,
+                  message: 'No workouts yet',
+                  height: 150,
+                  compact: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const DashboardSectionCard(
+            title: 'Progression',
+            icon: Icons.trending_up_rounded,
+            message: 'Your progress will appear here',
+            height: 154,
+            compact: true,
+          ),
+        ],
+      ),
     );
   }
 

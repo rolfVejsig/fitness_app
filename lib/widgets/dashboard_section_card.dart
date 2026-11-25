@@ -34,7 +34,7 @@ class DashboardSectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: AppColors.accent, size: 20),
+              Icon(icon, color: AppColors.secondaryText, size: 20),
               const SizedBox(width: 9),
               Text(
                 title,
